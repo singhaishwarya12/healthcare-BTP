@@ -1,31 +1,17 @@
-"""
-/
-    /registration
-    /login
-    /profile
-    /upcmoing-appointments
-    /upcmoing-appointments/:id
-    /previous-appointments
-    /previous-appointments/:id
-/treatment-history
-/treatment-history/:id
-/treatments-ongoing
-/treatments-ongoing/:id
-    /test-reports
-    /test-reports/:id
-/:uuid
-/logout
-"""
-
 from .views import (registrationView, 
                     CustomAuthToken,
                     patientProfileView,
                     patientHistoryView,
-                    appointmentViewPatient,
+                    appointmentViewPatient2,
                     FeedbackView,
+                    SlotView2,
                     upcomingAppointmentView,
                     previousAppointmentView,
-                    TestReportView)
+                    PrescriptionView,
+                    TestReportView,
+                    GetDrView,
+                    DrFeedbackView,
+                    DoctorSearchView)
 from django.urls import path
 
 
@@ -33,15 +19,30 @@ urlpatterns = [
     path('signup/', registrationView.as_view(), name='api_patient_registration'),
     path('login/', CustomAuthToken.as_view(), name='api_patient_login'),
     path('profile/', patientProfileView.as_view(), name='api_patient_profile'),
-    #path('book-appointment/', bookAppointmentView.as_view(), name='api_patient_book_Appointment'),
-    path('appointment/', appointmentViewPatient.as_view(), name='api_patient_appointment'),
-    path('appointment/<int:pk>/', appointmentViewPatient.as_view(), name='api_patient_appointment_detail'),
+
+    path('get-dr/',GetDrView.as_view(),name='api_list_dr'),
+    path('get-dr/<int:pk>/',GetDrView.as_view(),name='api_list_dr'),
+    
+    path('get-slots/', SlotView2.as_view(), name='api_patient_slots_view'),
+    #to list all appointments
+    path('appointment/', appointmentViewPatient2.as_view(), name='api_patient_appointment'),
+    path('appointment/<int:pk>/', appointmentViewPatient2.as_view(), name='api_patient_appointment_detail'),
     path('appointment/<int:pk>/feedback/', FeedbackView.as_view(), name='api_patient_feedback'),
+
     path('upcoming-appointment/', upcomingAppointmentView.as_view(), name='api_patient_upcoming-appointment'),
-    path('upcoming-appointment/<int:pk>', upcomingAppointmentView.as_view(), name='api_patient_upcoming-appointment_detail'),
+    path('upcoming-appointment/<int:pk>/', upcomingAppointmentView.as_view(), name='api_patient_upcoming-appointment_detail'),
+
     path('previous-appointment/', previousAppointmentView.as_view(), name='api_patient_previous-appointment'),
-    path('previous-appointment/<int:pk>', previousAppointmentView.as_view(), name='api_patient_previous-appointment_detail'),
+    path('previous-appointment/<int:pk>/', previousAppointmentView.as_view(), name='api_patient_previous-appointment_detail'),
+
     path('test-report/', TestReportView.as_view(), name='api_patient_test_Report'),
-    path('test-report/<int:pk>', TestReportView.as_view(), name='api_patient_test_Report_detail'),
+    path('test-report/<int:pk>/', TestReportView.as_view(), name='api_patient_test_Report_detail'),
+
+    path('prescription/', PrescriptionView.as_view(), name='api_patient_prescription'),
+
     path('history/', patientHistoryView.as_view(), name='api_patient_history'),
+
+    path('doctor/<int:pk>/feedback/',DrFeedbackView.as_view(),name='api_dr_feedback'),
+
+    path('doctor-search/', DoctorSearchView.as_view(), name='doctor-search'),
 ]

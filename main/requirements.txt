@@ -1,0 +1,13 @@
+
+pillow
+
+pandas
+numpy
+openai
+joblib
+
+sklearn
+xgboost
+
+folium
+geopy

@@ -1,4 +1,4 @@
-from patient.models import Appointment, Feedback
+from patient.models import Appointment, Feedback, Prescription, Medicine, patient
 from rest_framework import serializers
 from user.models import User
 from doctor.models import doctor, Slot, Dates
@@ -74,8 +74,10 @@ class doctorProfileSerializer(serializers.Serializer):
         (Pediatric, 'Pediatric'),
         (Physiotherapy, 'Physiotherapy'),
     ]
-    department=serializers.ChoiceField(label='Department:', choices=department_choice)
+    specialization=serializers.ChoiceField(label='specialization:', choices=department_choice)
     address= serializers.CharField(label="Address:")
+    feesperSession = serializers.CharField()
+    pincode= serializers.CharField(label="Pin Code:")
     mobile=serializers.CharField(label="Mobile Number:", max_length=20)
     pic = serializers.ImageField(required=False)
 
@@ -88,59 +90,70 @@ class doctorProfileSerializer(serializers.Serializer):
     def create(self, validated_data):
         try: 
             new_doctor= doctor.objects.create(
-                department=validated_data['department'],
+                specialization=validated_data['specialization'],
                 address=validated_data['address'],
+                feesperSession = validated_data['feesperSession'],
+                pincode = validated_data['pincode'],
                 mobile=validated_data['mobile'],
                 pic=validated_data['pic'],
                 user=validated_data['user']
             )
         except KeyError:
             new_doctor= doctor.objects.create(
-                department=validated_data['department'],
+                specialization=validated_data['specialization'],
                 address=validated_data['address'],
+                feesperSession = validated_data['feesperSession'],
+                pincode = validated_data['pincode'],
                 mobile=validated_data['mobile'],
                 user=validated_data['user']
             )
         return new_doctor
     
     def update(self, instance, validated_data):
-        instance.department=validated_data.get('department', instance.department)
+        instance.specialization=validated_data.get('specialization', instance.specialization)
         instance.address=validated_data.get('address', instance.address)
+        instance.pincode=validated_data.get('pincode', instance.pincode)
+        instance.feesperSession=validated_data.get('feesperSession', instance.feesperSession)
         instance.mobile=validated_data.get('mobile', instance.mobile)
         instance.save()
         return instance
-
-
-
-class patientHistorySerializerDoctorView(serializers.Serializer):
-    Cardiologist='CL'
-    Dermatologists='DL'
-    Emergency_Medicine_Specialists='EMC'
-    Immunologists='IL'
-    Anesthesiologists='AL'
-    Colon_and_Rectal_Surgeons='CRS'
-    admit_date=serializers.DateField(label="Admit Date:", read_only=True)
-    symptomps=serializers.CharField(label="Symptomps:", style={'base_template': 'textarea.html'})
-    department=serializers.CharField(label='Department: ')
-    #required=False; if this field is not required to be present during deserialization.
-    release_date=serializers.DateField(label="Release Date:", required=False)
-    assigned_doctor=serializers.StringRelatedField(label='Assigned Doctor:')
     
-
-
-class doctorAppointmentSerializer(serializers.Serializer):
-    #patient_name=serializers.SerializerMethodField('related_patient_name')
-    #patient_age=serializers.SerializerMethodField('related_patient_age')
-    id = serializers.IntegerField()
-    appointment_date=serializers.DateField(label="Appointment Date:",)
-    appointment_time=serializers.TimeField(label="Appointment Time:")
-    
+class PatientProfileSerializer(serializers.Serializer):
+    age=serializers.DecimalField(label="Age:", max_digits=4,decimal_places=1)
+    address= serializers.CharField(label="Address:")
+    pincode = serializers.CharField()
+    mobile=serializers.CharField(label="Mobile Number:", max_length=20)
+    pic = serializers.ImageField(required=False)
+    email = serializers.EmailField(label="Email: ")
+    patient_name = serializers.SerializerMethodField('related_patient_name')
 
     def related_patient_name(self, obj):
-        return obj.patient_history.patient.get_name
+        return obj.get_name
+
+class doctorAppointmentSerializer(serializers.Serializer):
+    patient_name=serializers.SerializerMethodField('related_patient_name')
+    patient_age=serializers.SerializerMethodField('related_patient_age')
+    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    status = serializers.CharField()
+    appointment_date=serializers.DateField(label="Appointment Date:",)
+    appointment_time=serializers.TimeField(label="Appointment Time:")
+    symptoms = serializers.CharField()
+    meeting_link = serializers.CharField()
+    
+    def update(self, instance, validated_data):
+        instance.meeting_link =validated_data.get('meeting_link', instance.meeting_link)
+        instance.appointment_date =validated_data.get('appointment_date', instance.appointment_date)
+        instance.appointment_time =validated_data.get('appointment_time', instance.appointment_time)
+        instance.symptoms =validated_data.get('symptoms', instance.symptoms)
+        instance.status = validated_data.get('status',instance.status)
+        instance.save()
+        return instance
+
+    def related_patient_name(self, obj):
+        return obj.patient.get_name
     
     def related_patient_age(self, obj):
-        return obj.patient_history.patient.age
+        return obj.patient.age
 
 class FeedbackDrSerializer(serializers.Serializer):
     given = serializers.BooleanField()
@@ -150,6 +163,7 @@ class FeedbackDrSerializer(serializers.Serializer):
 class SlotTimeSerializer(serializers.Serializer):
     time = serializers.TimeField()
     isBooked = serializers.BooleanField(default=False)
+    date = serializers.SlugRelatedField(slug_field='date',queryset=Dates.objects.all())
 
     def create(self, validated_data):
         new_time_slot = Slot.objects.create(
@@ -162,7 +176,6 @@ class SlotTimeSerializer(serializers.Serializer):
         instance.save()
         return instance
     
-
 class SlotSerializer(serializers.Serializer):
     date = serializers.DateField()
     time = serializers.TimeField()

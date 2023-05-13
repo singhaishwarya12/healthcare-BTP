@@ -1,16 +1,35 @@
 from django.contrib import admin
-from . models import patient, Appointment, Feedback
+from . models import patient, Appointment, Feedback, Medicine, Prescription, TestReport, TreatmentHistory
 
 # Register your models here.
 
 class AppointmentAdmin(admin.ModelAdmin):
     list_display=('id','status','appointment_date','appointment_time')
-admin.site.register(Appointment, AppointmentAdmin)
 
 class PatientAdmin(admin.ModelAdmin):
-    list_display=('user','age','address','mobile')
+    list_display=('get_name','user','age','address','mobile')
 
-admin.site.register(patient, PatientAdmin)
+
 class FeedbackAdmin(admin.ModelAdmin):
     list_display=('id','rating','comment')
+
+class PrescriptionAdmin(admin.ModelAdmin):
+    list_display = ('get_dr','get_patient','get_appointment')
+
+
+class MedicineAdmin(admin.ModelAdmin):
+    list_display = ('name','type')
+
+class TestReportAdmin(admin.ModelAdmin):
+    list_display = ('get_patient','test_name','get_dr')
+
+class TreatmentHistoryAdmin(admin.ModelAdmin):
+    list_display = ('id','get_patient','get_dr')
+
+admin.site.register(Medicine,MedicineAdmin)
+admin.site.register(Prescription,PrescriptionAdmin)
+admin.site.register(TestReport,TestReportAdmin)
+admin.site.register(Appointment, AppointmentAdmin)
+admin.site.register(patient, PatientAdmin)
 admin.site.register(Feedback, FeedbackAdmin)
+admin.site.register(TreatmentHistory,TreatmentHistoryAdmin)

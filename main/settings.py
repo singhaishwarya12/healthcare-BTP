@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'doctor',
     'patient',
     'user',
+    'ML',
+    'geolocation',
 
     'rest_framework',
     'rest_framework.authtoken',
@@ -147,3 +149,4 @@ MEDIA_URL = 'media/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+OPENAI_API_KEY = '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'

@@ -29,32 +29,50 @@ class doctor(models.Model):
         (Pediatric, 'Pediatric'),
         (Physiotherapy, 'Physiotherapy'),
     ]
-    department=models.CharField(max_length=3, choices=department_choices, default=Cardiology)
+    specialization=models.CharField(max_length=3, choices=department_choices, default=Cardiology)
+    feesperSession = models.CharField(max_length=10)
     address= models.TextField()
     mobile=models.CharField(max_length=20)
     email = models.EmailField(verbose_name='email', max_length=60)
     pic = models.ImageField(upload_to=upload_To, blank=True ,null=True)
-    #available_slots = models.ForeignKey(Dates, on_delete=models.CASCADE)
+    pincode = models.CharField(max_length=10)
     user=models.OneToOneField(User,on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['mobile', 'email','user'], name='dr_unique')
+        ]
+
+    class Meta:
+        ordering = ['specialization']
 
     @property
     def get_name(self):
-        return self.user.first_name+" "+self.user.last_name
+        return f"{self.user.first_name} {self.user.last_name}"
+        #return self.user.first_name+" "+self.user.last_name
     @property
     def get_id(self):
-        return self.user.id
+        return self.id
     def __str__(self):
-        return "{} ({})".format(self.user.first_name,self.department)
+        return "{} ({})".format(self.user.first_name,self.specialization)
+
+class Dates(models.Model):
+    date = models.DateField(verbose_name='Date')
+    #slots = models.ForeignKey(Slot, on_delete=models.CASCADE, related_name='dates')
+    doctor_id = models.ForeignKey(doctor, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['doctor_id', 'date'], name='date_dr_unique')
+        ]
 
 class Slot(models.Model):
     time = models.TimeField()
     isBooked = models.BooleanField(default=False)
+    date = models.ForeignKey(Dates,on_delete=models.CASCADE,related_name='slot')
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['time', 'date'], name='date_time_unique')
+        ]
 
-class Dates(models.Model):
-    date = models.DateField(verbose_name='Date')
-    slots = models.ForeignKey(Slot, on_delete=models.CASCADE)
-    doctor_id = models.ForeignKey(doctor, on_delete=models.CASCADE)
-
-    """def fn():
-        return Slot.objects.filter(isBooked=False)"""

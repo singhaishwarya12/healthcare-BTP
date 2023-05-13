@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
-from .serializers import doctorRegistrationSerializer, doctorProfileSerializer, doctorAppointmentSerializer, SlotSerializer, SlotTimeSerializer, FeedbackDrSerializer
+from patient.serializers import PrescriptionSerializerPatient, patientHistorySerializer, TestReportSerializer
+from .serializers import doctorRegistrationSerializer, doctorProfileSerializer, doctorAppointmentSerializer, SlotSerializer, SlotTimeSerializer, FeedbackDrSerializer, PatientProfileSerializer
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,9 +9,9 @@ from doctor.models import doctor, Dates, Slot
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import BasePermission
-from patient.models import Appointment, Feedback
+from patient.models import Appointment, Feedback, Prescription, Medicine, patient, TreatmentHistory, TestReport
 import datetime
-from datetime import time
+from datetime import time, datetime, date
 
 class IsDoctor(BasePermission):
     """custom Permission class for Doctor"""
@@ -66,9 +67,6 @@ class registrationView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
-
 class doctorProfileView(APIView):
     """"API endpoint for doctor profile view/update-- Only accessble by doctors"""
 
@@ -99,62 +97,64 @@ class doctorProfileView(APIView):
                 'profile_data':profileSerializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
+class doctorPendingRequestView(APIView):
+    """API endpoint for getting all appointment detail-only accesible by doctor"""
+    permission_classes = [IsDoctor]
+
+    def get_object(self, pk):
+        try:
+            return Appointment.objects.get(pk=pk)
+        except Appointment.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk=None,format=None):
+        user = request.user
+        user_doctor = doctor.objects.filter(user=user).get()
+        if pk:
+            appointment = self.get_object(pk)
+            app_serializer = doctorAppointmentSerializer(appointment)
+            return Response(app_serializer.data, status=status.HTTP_200_OK)
+        appointments=Appointment.objects.filter(doctor=user_doctor,status='new')
+        appointmentSerializer=doctorAppointmentSerializer(appointments, many=True)
+        return Response(appointmentSerializer.data, status=status.HTTP_200_OK)
+
 class doctorAppointmentView(APIView):
     """API endpoint for getting all appointment detail-only accesible by doctor"""
     permission_classes = [IsDoctor]
 
-    def get(self, request, format=None):
+    def get_object(self, pk):
+        try:
+            return Appointment.objects.get(pk=pk)
+        except Appointment.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk=None,format=None):
         user = request.user
         user_doctor = doctor.objects.filter(user=user).get()
-        appointments=Appointment.objects.filter(doctor=user_doctor)
+        if pk:
+            appointment = self.get_object(pk)
+            app_serializer = doctorAppointmentSerializer(appointment)
+            return Response(app_serializer.data, status=status.HTTP_200_OK)
+        #appointments=Appointment.objects.filter(doctor=user_doctor)
+        appointments=Appointment.objects.filter(doctor=user_doctor,status='confirmed',appointment_date__gte=date.today())
         appointmentSerializer=doctorAppointmentSerializer(appointments, many=True)
         return Response(appointmentSerializer.data, status=status.HTTP_200_OK)
-    
-class SlotView(APIView):
-
-    #permission_classes
-    """appointments = Appointment.objects.filter(doctor_id=doctor_id, date=date)
-        booked_slots = []
-        for appointment in appointments:
-            booked_slots.append(appointment.slot)
-        available_slots = Slot.objects.exclude(id__in=[slot.id for slot in booked_slots])
-        serializer = SlotSerializer(available_slots, many=True)"""
-
-    def get(self, request, format = None):
-        id = request.data.get('doctor') #request should contain doctor
-        user_doctor = doctor.objects.get(pk=id)
-        date = request.data.get('date')
-
-        time_slots = Dates.objects.filter(doctor_id=user_doctor, date=date)
-
-        if not time_slots.exists():
-            times = [9,12,14,17]
-            for t in times:
-                slotTime = time(t)
-                s = Slot.objects.create(time=slotTime, isBooked=False)
-                Dates.objects.create(doctor_id=user_doctor, date=date,slots=s)
-
-        available_slots = []
-        for slot in time_slots:
-            if(slot.slots.isBooked==False):
-                available_slots.append(slot.slots)
-        slots = Slot.objects.filter(id__in=[slot.id for slot in available_slots])
-        serializer = SlotTimeSerializer(slots, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    """def post(self, request, format=None):
-        id = request.user #request should contain doctor
-        user_doctor = doctor.objects.filter(user=id).get()
-        date = request.data.get('date')
-        slots = Dates.objects.filter(doctor_id=user_doctor, date=date).get()
-        serializer = SlotSerializer(
-            data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response( serializer.errors
-        , status=status.HTTP_400_BAD_REQUEST)"""
-    
+       
+    def put(self, request,pk=None, format=None):
+        appstatus = request.data['status']
+        appointment = self.get_object(pk)
+        app_serializer = doctorAppointmentSerializer(instance = appointment, data=request.data,partial=True)
+        if app_serializer.is_valid():
+            app_serializer.save()
+            if appstatus == 'confirmed':
+                time = request.data['appointment_time']
+                date = request.data['appointment_date']
+                start_datetime = datetime.strptime(time, '%H:%M:%S').time()
+                date = datetime.strptime(date, '%Y-%m-%d').date()
+                slot_date = Dates.objects.filter(doctor_id=appointment.doctor, date=date).get()
+                slot_time = Slot.objects.filter(date=slot_date, time=start_datetime).update(isBooked=True)
+            return Response(app_serializer.data, status=status.HTTP_200_OK)
+        return Response(app_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class FeedbackView(APIView):
 
@@ -165,3 +165,51 @@ class FeedbackView(APIView):
          serializer = FeedbackDrSerializer(feedback)
          return Response(serializer.data, status=status.HTTP_200_OK)
 
+class WritePrescription(APIView):
+
+    permission_classes = [IsDoctor]
+
+    def post(self, request,pk=None, format=None):
+        appointment = Appointment.objects.get(pk=pk)
+        diagnosis = request.data.get('diagnosis')
+        test_required = request.data.get('test_required')
+        advice =request.data.get('advice')
+        Patient = appointment.patient
+        Doctor = appointment.doctor
+        medicine = request.data['medicine']
+
+        prescription = Prescription.objects.create(Doctor=Doctor, 
+                                                   diagnosis=diagnosis,
+                                                   appointment=appointment,
+                                                   Patient=Patient,
+                                                   advice=advice,
+                                                   test_required=test_required)
+        for m in medicine:
+            med = Medicine.objects.create(
+                prescription=prescription,
+                name=m['name'],
+                type=m['type'],
+                duration=m['duration'],
+                times=m['times'],
+                dosage=m['dosage']
+            )
+        serializer = PrescriptionSerializerPatient(prescription)
+        if serializer.is_valid :
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PatientProfileView(APIView):
+    permission_classes = [IsDoctor]
+
+    def get(self, request,pk=None, format = None):
+        Patient = patient.objects.get(pk=pk)
+        profile_serializer = PatientProfileSerializer(Patient)
+        history = TreatmentHistory.objects.filter(patient=Patient)
+        history_serializer = patientHistorySerializer(history, many=True)
+        test_report = TestReport.objects.filter(patient=Patient)
+        test_report_serializer = TestReportSerializer(test_report,many=True)
+        return Response({
+            'patient_profile': profile_serializer.data,
+            'patient_history': history_serializer.data,
+            'test_report':test_report_serializer.data
+        }, status=status.HTTP_200_OK)
