@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>W3.CSS Template</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto'>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif}
+h2{text-align:center;}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px;
+}
+div.box{
+
+}
+
+tr:nth-child(even) {
+  background-color: #D6EEEE;
+}
+</style>
+</head>
+<body class="w3-light-grey">
+
+<!-- Page Container -->
+<div class="w3-content w3-margin-top" style="max-width:1400px;">
+
+
+    <!-- Right Column -->
+    <div class="w3-full">
+    
+      <div class="container w3-card w3-white w3-margin-bottom">
+        <h2 class="w3-text-grey w3-padding-6 text-primary">CLINIC NAME: {{clinic_name}}</h2>
+        <h3 class="w3-text-grey w3-padding-1 center">Dr Name : {{dr_name}}</h3>
+        
+            <table>
+                <tr>
+                <th>Patient Name</th>
+                <th>Patient Age</th>
+                <th>Gender</th>
+                </tr>
+                <tr>
+                <td>{{patient_name}}</td>
+                <td>{{patient_age}}</td>
+                <td>{{patient_gender}}</td>
+                </tr>
+                </table>
+        
+        <div class="container">
+          <h5 class="w3-opacity"><b>Symptoms</b></h5>
+          <p>{{symptoms}}</p>
+          <hr>
+        </div>
+        <div class="container">
+          <h5 class="w3-opacity"><b>Diagnosis</b></h5>
+          <p>{{diagnosis}}</p>
+          <hr>
+        </div>
+        <div class="container">
+        <h5 class="w3-opacity"><b>Advice</b></h5>
+          <p>{{advice}}</p>
+          <hr>
+        </div>
+        <div class="container">
+          <h5 class="w3-opacity"><b>Test Required</b></h5>
+          <p>{{test_required}}</p><br>
+        </div>
+      </div>
+
+      <div class="container w3-card w3-white">
+        <h2 class="w3-text-grey w3-padding-16">Medicines</h2>
+        {% for m in medicine %}
+            <div class="container">
+            <h5 class="w3-opacity"><b>Medicine Name: </b>{{m.name}}</h5>
+            <table>
+            <tr>
+            <th>Type</th>
+            <th>Dosage</th>
+            <th>Dosage Time</th>
+            <th>Take With</th>
+            </tr>
+            <tr>
+            <td>{{m.type}}</td>
+            <td>{{m.dosage}}</td>
+            <td>{{m.times}}</td>
+            <td>{{m.With}}</td>
+            </tr>
+            </table>
+            </div>
+        {% endfor %}
+      </div>
+
+    <!-- End Right Column -->
+    </div>
+    
+  <!-- End Grid -->
+  </div>
+  
+  <!-- End Page Container -->
+</div>
+
+
+
+</body>
+</html>
+

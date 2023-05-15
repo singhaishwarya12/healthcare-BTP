@@ -5,7 +5,8 @@ from user.models import User
 from patient.models import patient, Appointment, TestReport, Feedback, Medicine, Prescription, TreatmentHistory
 from django.contrib.auth.models import Group
 from doctor.models import doctor
-from datetime import date
+from doctor.serializers import FeedbackDrSerializer
+from datetime import date, datetime, time
 
 
 class patientRegistrationSerializer(serializers.Serializer):
@@ -63,6 +64,7 @@ class patientProfileSerializer(serializers.Serializer):
     mobile=serializers.CharField(label="Mobile Number:", max_length=20)
     pic = serializers.ImageField(required=False)
     email = serializers.EmailField(label="Email: ")
+    gender = serializers.CharField()
 
     def validate_mobile(self, mobile):
         if mobile.isdigit()==False:
@@ -78,7 +80,8 @@ class patientProfileSerializer(serializers.Serializer):
                 pincode=validated_data['pincode'],
                 mobile=validated_data['mobile'],
                 email=validated_data['email'],
-                user=validated_data['user']
+                user=validated_data['user'],
+                gender = validated_data['gender']
             )
         except KeyError:
             new_patient= patient.objects.create(
@@ -87,7 +90,8 @@ class patientProfileSerializer(serializers.Serializer):
                 pincode=validated_data['pincode'],
                 mobile=validated_data['mobile'],
                 email=validated_data['email'],
-                user=validated_data['user']
+                user=validated_data['user'],
+                gender = validated_data['gender']
             )
         return new_patient
     
@@ -142,10 +146,12 @@ class appointmentSerializerPatient(serializers.Serializer):
     appointment_date = serializers.DateField(label='Appointment date')
     appointment_time = serializers.TimeField(label='Appointement time')
     status = serializers.ChoiceField(choices=status_choice, default='new')
-    doctor = serializers.PrimaryKeyRelatedField(queryset=doctor.objects.all())
+    dr_name=serializers.SerializerMethodField('related_dr_name')
     meeting_link = serializers.CharField(max_length = 100, required= False)
     symptoms = serializers.CharField(max_length=200)
 
+    def related_dr_name(self, obj):
+        return obj.doctor.get_name
 
     def create(self,validated_data):
         patient=validated_data['patient']
@@ -205,6 +211,7 @@ class medicineSerializer(serializers.Serializer):
     duration = serializers.CharField(max_length=200)
     times = serializers.CharField(max_length=200)
     dosage = serializers.CharField(max_length=200)
+    With = serializers.CharField(max_length=200)
 
 class PrescriptionSerializerPatient(serializers.Serializer):
     diagnosis = serializers.CharField()
@@ -212,10 +219,38 @@ class PrescriptionSerializerPatient(serializers.Serializer):
     advice = serializers.CharField()
     test_required = serializers.CharField()
 
+class PdfSerializer(serializers.Serializer):
+    diagnosis = serializers.CharField()
+    medicine = medicineSerializer(many=True)
+    advice = serializers.CharField()
+    test_required = serializers.CharField()
+    clinic_name = serializers.SerializerMethodField('get_clinic_name')
+    dr_name = serializers.SerializerMethodField('get_dr_name')
+    patient_name = serializers.SerializerMethodField('get_patient_name')
+    patient_age = serializers.SerializerMethodField('get_age')
+    patient_gender = serializers.SerializerMethodField('get_gender')
+    symptoms = serializers.SerializerMethodField('get_symptoms')
+
+    def get_clinic_name(self, obj):
+        return obj.Doctor.clinic_name
+    
+    def get_dr_name(self, obj):
+        return obj.Doctor.get_name
+    
+    def get_patient_name(self, obj):
+        return obj.Patient.get_name
+    
+    def get_age(self, obj):
+        return obj.Patient.age
+    
+    def get_gender(self, obj):
+        return obj.Doctor.gender
+    
+    def get_symptoms(self, obj):
+        return obj.appointment.symptoms
 
 class appointmentHistory(serializers.Serializer):
     id=serializers.PrimaryKeyRelatedField(read_only=True)
-    meeting_link = serializers.CharField()
     doctor = serializers.SerializerMethodField('get_dr_name')
     symptoms = serializers.CharField()
     appointment_date = serializers.DateField()
@@ -225,7 +260,19 @@ class appointmentHistory(serializers.Serializer):
     def get_dr_name(self, obj):
         return obj.doctor.get_name
     
+class pendingReqSerializer(serializers.Serializer):
+    dr_name=serializers.SerializerMethodField('related_dr_name')
+    dr_email=serializers.SerializerMethodField('related_dr_email')
+    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    appointment_date=serializers.DateField(label="Appointment Date:",)
+    appointment_time=serializers.TimeField(label="Appointment Time:")
+    symptoms = serializers.CharField()
+
+    def related_dr_name(self, obj):
+        return obj.doctor.get_name
     
+    def related_dr_email(self, obj):
+        return obj.doctor.email
 
 class patientHistorySerializer(serializers.Serializer):
 
@@ -240,7 +287,9 @@ class patientHistorySerializer(serializers.Serializer):
         return obj.patient.get_name
    
    def to_representation(self, instance):
-        appointment = instance.appointment.filter(status='confirmed',appointment_date__lt=date.today())
+        appointment = instance.appointment.filter(status='confirmed',
+                                                  appointment_date__lte=date.today()
+                                                  )
         app_serializer = appointmentHistory(appointment, many=True)
         representation = super().to_representation(instance)
         representation['appointment'] = app_serializer.data
@@ -252,14 +301,21 @@ class ViewDrSerializer(serializers.Serializer):
     mobile = serializers.CharField()
     address = serializers.CharField()
     pincode = serializers.CharField()
+    feesperSession=serializers.CharField()
+    registration_num = serializers.IntegerField()
     pic = serializers.ImageField(required=False)
     email = serializers.EmailField(label="Email: ")
     dr_name = serializers.SerializerMethodField('related_doctor_name')
+    gender = serializers.CharField()
+    feedback = FeedbackDrSerializer(many=True)
     dr_id = serializers.SerializerMethodField('get_dr_id')
 
     def related_doctor_name(self, obj):
         return obj.get_name
     
+    def related_doctor_gender(self, obj):
+        return obj.gender
+
     def get_dr_id(self,obj):
         return obj.id
     

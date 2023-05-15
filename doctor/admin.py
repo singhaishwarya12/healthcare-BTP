@@ -7,12 +7,14 @@ from patient.models import Appointment
 class DoctorAppointment(admin.TabularInline):
     model=Appointment
 
+
+
 class doctorAdmin(admin.ModelAdmin):
     list_display=['get_name','get_id','specialization', 'address', 'mobile', 'user']
     inlines=[DoctorAppointment]
 
 class SlotAdmin(admin.ModelAdmin):
-    list_display=['id','time', 'isBooked']
+    list_display=['id','time', 'isBooked','date']
 
 class DateAdmin(admin.ModelAdmin):
     list_display=['id','date']

@@ -47,6 +47,10 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
+
+    'easy_pdf',
+
+    #'encryption',
 ]
 
 REST_FRAMEWORK={
@@ -149,4 +153,4 @@ MEDIA_URL = 'media/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = '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'

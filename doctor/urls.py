@@ -1,5 +1,5 @@
 from .views import registrationView, CustomAuthToken, doctorProfileView, doctorAppointmentView, FeedbackView, WritePrescription, \
-                PatientProfileView, doctorPendingRequestView
+                PatientProfileView, doctorPendingRequestView, doctorPrevAppointment
 from django.urls import path
 
 urlpatterns = [
@@ -11,7 +11,10 @@ urlpatterns = [
     #to show list of upcoming approved appointments
     path('appointment/', doctorAppointmentView.as_view(), name='api_doctor_appointment'),
     path('appointment/<int:pk>/', doctorAppointmentView.as_view(), name='api_doctor_appointment_detail'),
+    #for confirmed previous appointment
+    path('previous-appointment/',doctorPrevAppointment.as_view()),
     path('appointment/<int:pk>/prescription/',WritePrescription.as_view()),
-    path('appointment/<int:pk>/feedback/', FeedbackView.as_view(), name='api_doctor_feedback'),
-    path('patient/<int:pk>/profile/',PatientProfileView.as_view())
+    path('feedback/', FeedbackView.as_view(), name='api_doctor_feedback'),
+    #path('appointment/<int:pk>/feedback/', FeedbackView.as_view(), name='api_doctor_feedback'),
+    path('patient/profile/',PatientProfileView.as_view())
 ]

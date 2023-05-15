@@ -53,30 +53,30 @@ class doctorRegistrationSerializer(serializers.Serializer):
         return user
 
 class doctorProfileSerializer(serializers.Serializer):
-    Surgery = 'S'
-    Cardiology = 'C'
-    Dermatalogy = 'DT'
-    ENT = 'ENT'
-    Gynecology = 'G'
-    Neurology = 'N'
-    Orthopedic = 'OP'
-    Pediatric = 'PT'
-    Physiotherapy = 'PY'
 
-    department_choice = [
-        (Surgery, 'Surgery'),
-        (Cardiology,'Cardiology'),
-        (Dermatalogy, 'Dermatalogy'),
-        (ENT, 'ENT'),
-        (Gynecology , 'Gynaecology'),
-        (Neurology, 'Neurology'),
-        (Orthopedic, 'Orthopedic'),
-        (Pediatric, 'Pediatric'),
-        (Physiotherapy, 'Physiotherapy'),
-    ]
-    specialization=serializers.ChoiceField(label='specialization:', choices=department_choice)
+    department_choices = (
+        ('Rheumatologist','Rheumatologist'),
+        ('ENT_specialist', 'ENT_specialist'),
+        ('Cardiologist','Cardiologist'),
+        ('Orthopedist', 'Orthopedist'),
+        ('Neurologist', 'Neurologist'),
+        ('Allergist_Immunologist' , 'Allergist_Immunologist'),
+        ('Urologist', 'Urologist'),
+        ('Dermatologist','Dermatologist'),
+        ('Gastroenterologist', 'Gastroenterologist'),
+        ('Ophthalmologist', 'Ophthalmologist'),
+        ('General Physician', 'General Physician'),
+        ('obstetrics and gynaecologist','obstetrics and gynaecologist'),
+        ('paediatrician','paediatrician'),
+        ('psychiatrist','psychiatrist'),
+        ('Surgeon','Surgeon')
+    )
+    specialization=serializers.ChoiceField(label='specialization:', choices=department_choices)
     address= serializers.CharField(label="Address:")
     feesperSession = serializers.CharField()
+    clinic_name = serializers.CharField()
+    registration_num = serializers.IntegerField()
+    gender = serializers.CharField()
     pincode= serializers.CharField(label="Pin Code:")
     mobile=serializers.CharField(label="Mobile Number:", max_length=20)
     pic = serializers.ImageField(required=False)
@@ -96,7 +96,10 @@ class doctorProfileSerializer(serializers.Serializer):
                 pincode = validated_data['pincode'],
                 mobile=validated_data['mobile'],
                 pic=validated_data['pic'],
-                user=validated_data['user']
+                user=validated_data['user'],
+                gender=validated_data['gender'],
+                clinic_name=validated_data['clinic_name'],
+                registration_num = validated_data['registration_num']
             )
         except KeyError:
             new_doctor= doctor.objects.create(
@@ -105,7 +108,10 @@ class doctorProfileSerializer(serializers.Serializer):
                 feesperSession = validated_data['feesperSession'],
                 pincode = validated_data['pincode'],
                 mobile=validated_data['mobile'],
-                user=validated_data['user']
+                user=validated_data['user'],
+                gender=validated_data['gender'],
+                clinic_name=validated_data['clinic_name'],
+                registration_num = validated_data['registration_num']
             )
         return new_doctor
     
@@ -122,6 +128,7 @@ class PatientProfileSerializer(serializers.Serializer):
     age=serializers.DecimalField(label="Age:", max_digits=4,decimal_places=1)
     address= serializers.CharField(label="Address:")
     pincode = serializers.CharField()
+    gender = serializers.CharField()
     mobile=serializers.CharField(label="Mobile Number:", max_length=20)
     pic = serializers.ImageField(required=False)
     email = serializers.EmailField(label="Email: ")
@@ -130,15 +137,78 @@ class PatientProfileSerializer(serializers.Serializer):
     def related_patient_name(self, obj):
         return obj.get_name
 
-class doctorAppointmentSerializer(serializers.Serializer):
-    patient_name=serializers.SerializerMethodField('related_patient_name')
-    patient_age=serializers.SerializerMethodField('related_patient_age')
+class medicineSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    type = serializers.CharField(max_length=10)
+    duration = serializers.CharField(max_length=200)
+    times = serializers.CharField(max_length=200)
+    dosage = serializers.CharField(max_length=200)
+    With = serializers.CharField(max_length=200)
+
+class PrescriptionSerializerDr(serializers.Serializer):
+    diagnosis = serializers.CharField()
+    medicine = medicineSerializer(many=True)
+    advice = serializers.CharField()
+    test_required = serializers.CharField()
+
+class FeedbackSerializer(serializers.Serializer):
+    rating = serializers.IntegerField()
+    comment = serializers.CharField(max_length=200) 
+
+class DrPrevAppointment(serializers.Serializer):
+    id=serializers.PrimaryKeyRelatedField(read_only=True)
+    patient = serializers.SerializerMethodField('get_patient_name')
+    symptoms = serializers.CharField()
+    appointment_date = serializers.DateField()
+    appointment_time =serializers.TimeField()
+    prescription = PrescriptionSerializerDr()
+    feedback=FeedbackSerializer()
+
+    def get_patient_name(self, obj):
+        return obj.patient.get_name
+
+"""class RestrictedHistorySerializer(serializers.Serializer):
+
+   dr_name = serializers.SerializerMethodField('related_doctor_name')
+   patient_name = serializers.SerializerMethodField('related_patient_name')
+   appointment =  appointmentHistory(many=True)
+
+   def related_doctor_name(self, obj):
+        return obj.doctor.get_name
+   
+   def related_patient_name(self, obj):
+        return obj.patient.get_name
+   
+   def to_representation(self, instance):
+        appointment = instance.appointment.filter(status='confirmed',
+                                                  appointment_date__lte=date.today(),
+                                                  appointment_time__lte = datetime.now().time()
+                                                  )
+        app_serializer = appointmentHistory(appointment, many=True)
+        representation = super().to_representation(instance)
+        representation['appointment'] = app_serializer.data
+
+        return representation
+"""
+class doctorUpAppointmentSerializer(serializers.Serializer):
+    patient = PatientProfileSerializer()
     id = serializers.PrimaryKeyRelatedField(read_only=True)
-    status = serializers.CharField()
+    status = serializers.CharField(write_only=True)
     appointment_date=serializers.DateField(label="Appointment Date:",)
     appointment_time=serializers.TimeField(label="Appointment Time:")
     symptoms = serializers.CharField()
     meeting_link = serializers.CharField()
+
+class doctorAppointmentSerializer(serializers.Serializer):
+    patient = PatientProfileSerializer()
+    """patient_name=serializers.SerializerMethodField('related_patient_name')
+    patient_age=serializers.SerializerMethodField('related_patient_age')"""
+    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    status = serializers.CharField(write_only=True)
+    appointment_date=serializers.DateField(label="Appointment Date:",)
+    appointment_time=serializers.TimeField(label="Appointment Time:")
+    symptoms = serializers.CharField()
+    meeting_link = serializers.CharField(write_only=True)
     
     def update(self, instance, validated_data):
         instance.meeting_link =validated_data.get('meeting_link', instance.meeting_link)

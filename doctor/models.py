@@ -8,28 +8,25 @@ def upload_To(instance, filename):
 # Create your models here.
 
 class doctor(models.Model):
-    Surgery = 'S'
-    Cardiology = 'C'
-    Dermatalogy = 'DT'
-    ENT = 'ENT'
-    Gynecology = 'G'
-    Neurology = 'N'
-    Orthopedic = 'OP'
-    Pediatric = 'PT'
-    Physiotherapy = 'PY'
 
-    department_choices = [
-        (Surgery, 'Surgery'),
-        (Cardiology,'Cardiology'),
-        (Dermatalogy, 'Dermatalogy'),
-        (ENT, 'ENT'),
-        (Gynecology , 'Gynaecology'),
-        (Neurology, 'Neurology'),
-        (Orthopedic, 'Orthopedic'),
-        (Pediatric, 'Pediatric'),
-        (Physiotherapy, 'Physiotherapy'),
-    ]
-    specialization=models.CharField(max_length=3, choices=department_choices, default=Cardiology)
+    department_choices = (
+        ('Rheumatologist','Rheumatologist'),
+        ('ENT_specialist', 'ENT_specialist'),
+        ('Cardiologist','Cardiologist'),
+        ('Orthopedist', 'Orthopedist'),
+        ('Neurologist', 'Neurologist'),
+        ('Allergist_Immunologist' , 'Allergist_Immunologist'),
+        ('Urologist', 'Urologist'),
+        ('Dermatologist','Dermatologist'),
+        ('Gastroenterologist', 'Gastroenterologist'),
+        ('Ophthalmologist', 'Ophthalmologist'),
+        ('General Physician', 'General Physician'),
+        ('obstetrics and gynaecologist','obstetrics and gynaecologist'),
+        ('paediatrician','paediatrician'),
+        ('psychiatrist','psychiatrist'),
+        ('Surgeon','Surgeon')
+    )
+    specialization=models.CharField(max_length=50, choices=department_choices, default='General Physician')
     feesperSession = models.CharField(max_length=10)
     address= models.TextField()
     mobile=models.CharField(max_length=20)
@@ -37,6 +34,9 @@ class doctor(models.Model):
     pic = models.ImageField(upload_to=upload_To, blank=True ,null=True)
     pincode = models.CharField(max_length=10)
     user=models.OneToOneField(User,on_delete=models.CASCADE)
+    gender=models.CharField(max_length=10)
+    clinic_name=models.CharField(max_length=100)
+    registration_num = models.IntegerField()
 
     class Meta:
         constraints = [
@@ -71,6 +71,10 @@ class Slot(models.Model):
     isBooked = models.BooleanField(default=False)
     date = models.ForeignKey(Dates,on_delete=models.CASCADE,related_name='slot')
 
+    @property
+    def get_date(self):
+        return self.date.date
+    
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['time', 'date'], name='date_time_unique')

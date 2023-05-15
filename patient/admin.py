@@ -1,5 +1,5 @@
 from django.contrib import admin
-from . models import patient, Appointment, Feedback, Medicine, Prescription, TestReport, TreatmentHistory
+from . models import patient, Appointment, Feedback, Medicine, Prescription, TestReport, TreatmentHistory, AllowedAppointments
 
 # Register your models here.
 
@@ -26,6 +26,9 @@ class TestReportAdmin(admin.ModelAdmin):
 class TreatmentHistoryAdmin(admin.ModelAdmin):
     list_display = ('id','get_patient','get_dr')
 
+class AllowedAdmin(admin.ModelAdmin):
+    list_display = ('get_app','get_patient','allowed')
+
 admin.site.register(Medicine,MedicineAdmin)
 admin.site.register(Prescription,PrescriptionAdmin)
 admin.site.register(TestReport,TestReportAdmin)
@@ -33,3 +36,4 @@ admin.site.register(Appointment, AppointmentAdmin)
 admin.site.register(patient, PatientAdmin)
 admin.site.register(Feedback, FeedbackAdmin)
 admin.site.register(TreatmentHistory,TreatmentHistoryAdmin)
+admin.site.register(AllowedAppointments,AllowedAdmin)

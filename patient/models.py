@@ -17,6 +17,7 @@ class patient(models.Model):
     email = models.EmailField(verbose_name = "email", max_length = 60)
     pincode = models.CharField(max_length=10)
     user=models.OneToOneField(User,on_delete=models.CASCADE)
+    gender = models.CharField(max_length=10)
 
     class Meta:
         constraints = [
@@ -126,6 +127,7 @@ class Medicine(models.Model):
     duration = models.TextField()
     times = models.TextField()
     dosage = models.TextField()
+    With = models.TextField()
     prescription = models.ForeignKey(Prescription,on_delete=models.CASCADE, related_name='medicine')
 
 class TestReport(models.Model):
@@ -149,3 +151,16 @@ class TestReport(models.Model):
     def __str__(self):
         return self.patient.user.first_name+' - '+self.test_name
     
+class AllowedAppointments(models.Model):
+    patient = models.ForeignKey(patient,on_delete=models.CASCADE,related_name='allowed_app')
+    # the below appointment is the one which is allowing the doctor to view restricted history
+    allowing_appointment = models.ForeignKey(Appointment,on_delete=models.CASCADE,related_name='allowed_appointments')
+    allowed = models.IntegerField()
+
+    def get_patient(self):
+        return self.patient.user.first_name
+    get_patient.short_description = 'Patient'
+
+    def get_app(self):
+        return self.allowing_appointment.get_id
+    get_app.short_description = 'Allowing app id'

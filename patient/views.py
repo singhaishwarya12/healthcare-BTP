@@ -7,7 +7,8 @@ from .serializers import (patientRegistrationSerializer,
                           PrescriptionSerializerPatient,
                           TestReportSerializer,
                           appointmentHistory,
-                          ViewDrSerializer)
+                          ViewDrSerializer,
+                          pendingReqSerializer)
 from doctor.serializers import doctorAppointmentSerializer, SlotSerializer, SlotTimeSerializer
 
 from django.http import Http404
@@ -17,7 +18,7 @@ from rest_framework import serializers, status
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import BasePermission
-from .models import patient, Appointment, TestReport, Feedback, Prescription, Medicine, TreatmentHistory
+from .models import patient, Appointment, TestReport, Feedback, Prescription, Medicine, TreatmentHistory, AllowedAppointments
 from doctor.models import doctor, Dates, Slot
 from django.db.models import Q
 from datetime import date, time, datetime
@@ -170,7 +171,7 @@ class appointmentViewPatient(APIView):
         r_doctor = doctor.objects.get(pk=request_doctor)
         time_slots = Dates.objects.filter(doctor_id=r_doctor, date=date)
 
-        appointment_serializer = appointmentSerializerPatient(data=appointment_info)
+        appointment_serializer = appointmentSerializerPatient(data=request.data)
 
         if appointment_serializer.is_valid():
             appointment_serializer.save(patient=user_patient)
@@ -218,6 +219,30 @@ class FeedbackView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class patientPendingRequestView(APIView):
+    permission_classes = [IsPatient]
+
+    def get_object(self, pk):
+        try:
+            return Appointment.objects.get(pk=pk)
+        except Appointment.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk=None,format=None):
+        user = request.user
+        user_patient = patient.objects.filter(user=user).get()
+        if pk:
+            appointment = self.get_object(pk)
+            app_serializer = pendingReqSerializer(appointment)
+            return Response(app_serializer.data, status=status.HTTP_200_OK)
+        filter = Q(appointment_date__gt=date.today()) | \
+         (Q(appointment_date=date.today()) & Q(appointment_time__gte=datetime.now().time()))
+        
+        appointment=Appointment.objects.filter(filter).filter(status='new',patient=user_patient)
+        appointmentSerializer=pendingReqSerializer(appointment, many=True)
+        return Response(appointmentSerializer.data, status=status.HTTP_200_OK)
+    
+
 class upcomingAppointmentView(APIView):
 
     permission_classes = [IsPatient]
@@ -236,8 +261,10 @@ class upcomingAppointmentView(APIView):
             serializer = appointmentSerializerPatient(appointment_detail)
             return Response(serializer.data, status=status.HTTP_200_OK)
         
-        appointment=Appointment.objects.filter(status='confirmed', 
-                                               patient=user_patient, appointment_date__gte=date.today())
+        filter = Q(appointment_date__gt=date.today()) | \
+         (Q(appointment_date=date.today()) & Q(appointment_time__gte=datetime.now().time()))
+        
+        appointment=Appointment.objects.filter(filter).filter(status='confirmed',patient=user_patient)
         serializer=appointmentSerializerPatient(appointment, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -257,15 +284,16 @@ class previousAppointmentView(APIView):
         if pk:
             appointment_detail = self.get_object(pk)
             presciption = Prescription.objects.get(appointment=appointment_detail)
-            presciption_serializer = PrescriptionSerializerPatient(presciption)
-            app_serializer = appointmentSerializerPatient(appointment_detail)
-            return Response({
-                'appointment_detail':app_serializer,
-                'prescription_detail': presciption_serializer
-            }, status=status.HTTP_200_OK)
+            #presciption_serializer = PrescriptionSerializerPatient(presciption)
+            app_serializer = appointmentHistory(appointment_detail)
+            return Response(app_serializer.data, status=status.HTTP_200_OK)
         
-        appointment=Appointment.objects.filter(Q(status='confirmed'), 
-                                               patient=user_patient, appointment_date__lt=date.today())
+        filter = Q(appointment_date__lt=date.today()) | \
+         (Q(appointment_date=date.today()) & Q(appointment_time__lte=datetime.now().time()))
+
+        """appointment=Appointment.objects.filter(Q(status='confirmed'), 
+                                               patient=user_patient, appointment_date__lt=date.today())"""
+        appointment=Appointment.objects.filter(filter).filter(status='confirmed',patient=user_patient)
         serializer=appointmentHistory(appointment, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -419,9 +447,9 @@ class SlotView2(APIView):
     permission_classes = [IsPatient]
 
     def get(self, request, format = None):
-        id = request.data.get('doctor') #request should contain doctor
-        user_doctor = doctor.objects.get(pk=id)
-        date = request.data.get('date')
+        fid = request.GET.get('doctor') #request should contain doctor
+        user_doctor = doctor.objects.get(pk=fid)
+        date = request.GET.get('date')
 
         try: 
             date_slots = Dates.objects.filter(doctor_id=user_doctor, date=date).get()
@@ -502,6 +530,12 @@ class appointmentViewPatient2(APIView):
                                                 appointment_time = time,
                                                 treatment_history=treatment_history
                                                 )
+        for a in request.data['allowed_ids']:
+            print(a)
+            allow = AllowedAppointments.objects.create(patient=user_patient,
+                                                       allowing_appointment=appointment,
+                                                       allowed=a)
+
         return Response(status=status.HTTP_201_CREATED)
 
 class DoctorSearchView(APIView):
